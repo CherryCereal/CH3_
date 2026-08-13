@@ -16,7 +16,10 @@ public:
 	AItem();
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item | Components")
 	USceneComponent* SceneRoot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Components")
 	UStaticMeshComponent* StaticMeshComp;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Component")
