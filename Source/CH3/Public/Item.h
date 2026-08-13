@@ -27,4 +27,7 @@ protected:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	FTimerHandle RelocateTimerHandle;
+	void RelocateRandomly();
 };

@@ -19,12 +19,24 @@ void AItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FVector Origin = FVector(500.0f, 0.0f, 25.0f);
+	GetWorldTimerManager().SetTimer(
+		RelocateTimerHandle,
+		this,
+		&AItem::RelocateRandomly,
+		3.0f,
+		true // 3초마다 반복
+	);
+}
 
-	FVector Extent = FVector(500.0f, 500.0f, 0.0f);
-	FVector RandomLocation = FMath::RandPointInBox(FBox(Origin - Extent, Origin + Extent));
+void AItem::RelocateRandomly()
+{
+	FVector Origin = FVector(200.0f, 0.0f, 25.0f);
+	FVector Extent = FVector(1000.0f, 1000.0f, 0.0f);
 
-	SetActorLocation(RandomLocation);
+	float RandomX = FMath::RandRange(Origin.X - Extent.X, Origin.X + Extent.X);
+	float RandomY = FMath::RandRange(Origin.Y - Extent.Y, Origin.Y + Extent.Y);
+
+	SetActorLocation(FVector(RandomX, RandomY, Origin.Z));
 }
 
 void AItem::Tick(float DeltaTime)
