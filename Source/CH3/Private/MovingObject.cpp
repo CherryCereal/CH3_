@@ -12,29 +12,23 @@ AMovingObject::AMovingObject()
 	StaticMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
 	StaticMeshComp->SetupAttachment(SceneRoot);
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Game/Resources/Shapes/Shape_Torus.Shape_Torus"));
-	if (MeshAsset.Succeeded())
-	{
-		StaticMeshComp->SetStaticMesh(MeshAsset.Object);
-	}
-
-	static ConstructorHelpers::FObjectFinder<UMaterial> MaterialAsset(TEXT("/Game/Resources/Materials/M_Metal_Rust.M_Metal_Rust"));
-	if (MaterialAsset.Succeeded())
-	{
-		StaticMeshComp->SetMaterial(0, MaterialAsset.Object);
-	}
-
 	PrimaryActorTick.bCanEverTick = true;
-	MoveSpeed = 100.0f;
-	MaxRange = 300.0f;
 }
 
 // Called when the game starts or when spawned
 void AMovingObject::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	SetActorLocation(FVector(500.0f, 100.0f, 0.0f));
+
+	MoveSpeed = FMath::RandRange(100.0f, 500.0f);
+	MaxRange = FMath::RandRange(500.0f, 1000.0f);
+
+	FVector Origin = FVector(500.0f, 500.0f, 0.0f);
+
+	FVector Extent = FVector(200.0f, 200.0f, 0.0f);
+	FVector RandomLocation = FMath::RandPointInBox(FBox(Origin - Extent, Origin + Extent));
+
+	SetActorLocation(RandomLocation);
 }
 
 // Called every frame
@@ -45,7 +39,7 @@ void AMovingObject::Tick(float DeltaTime)
 	{
 		AddActorLocalOffset(FVector(MoveSpeed * DeltaTime, 0, 0));
 	}
-	if (FVector::Dist(GetActorLocation(), FVector(500.0f, 100.0f, 0.0f)) > MaxRange)
+	if (FMath::Abs(GetActorLocation().X - 500.0f) > MaxRange)
 	{
 		MoveSpeed *= -1;
 	}

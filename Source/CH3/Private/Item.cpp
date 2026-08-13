@@ -19,9 +19,9 @@ void AItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FVector Origin = FVector(200.0f, 0.0f, 25.0f);
+	FVector Origin = FVector(500.0f, 0.0f, 25.0f);
 
-	FVector Extent = FVector(1000.0f, 1000.0f, 0.0f);
+	FVector Extent = FVector(500.0f, 500.0f, 0.0f);
 	FVector RandomLocation = FMath::RandPointInBox(FBox(Origin - Extent, Origin + Extent));
 
 	SetActorLocation(RandomLocation);

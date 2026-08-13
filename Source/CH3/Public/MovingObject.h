@@ -16,7 +16,10 @@ public:
 	AMovingObject();
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MovingObjects | Components")
 	USceneComponent* SceneRoot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MovingObjects|Components")
 	UStaticMeshComponent* StaticMeshComp;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MovingObject|Component")
