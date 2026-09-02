@@ -77,7 +77,13 @@ void ASpartaCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	const FVector2D MoveInput = Value.Get<FVector2D>();
+	FVector2D MoveInput = Value.Get<FVector2D>();
+
+	if (HasActiveDebuff(EDebuffType::ReverseControl))
+	{
+		MoveInput.X = MoveInput.X * -1.0;
+		MoveInput.Y = MoveInput.Y * -1.0;
+	}
 
 	if(!FMath::IsNearlyZero(MoveInput.X))
 	{
@@ -107,17 +113,13 @@ void ASpartaCharacter::Look(const FInputActionValue& Value)
 }
 void ASpartaCharacter::StartSprint(const FInputActionValue& Value)
 {
-	if(GetCharacterMovement())
-	{
-		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
-	}
+	bIsSprinting = true;
+	RecalculateMovementModifiers();
 }
 void ASpartaCharacter::StopSprint(const FInputActionValue& Value)
 {
-	if(GetCharacterMovement())
-	{
-		GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
-	}
+	bIsSprinting = false;
+	RecalculateMovementModifiers();
 }
 
 float ASpartaCharacter::GetHealth() const
@@ -175,4 +177,112 @@ void ASpartaCharacter::UpdateOverheadHP()
 		HPText->SetText(FText::FromString(HealthString));
 	}
 
+}
+
+void ASpartaCharacter::ApplyDebuff(EDebuffType Type, float Duration, float Magnitude)
+{
+	int32 ExistingCount = 0;
+	for (const FActiveDebuff& Debuff : ActiveDebuffs)
+	{
+		if (Debuff.Type == Type) ExistingCount++;
+	}
+
+	FActiveDebuff NewDebuff;
+	NewDebuff.Type = Type;
+	NewDebuff.Duration = Duration;
+	NewDebuff.TimeRemaining = Duration;
+	NewDebuff.Magnitude = Magnitude;
+	NewDebuff.StackCount = ExistingCount + 1;
+	ActiveDebuffs.Add(NewDebuff);
+
+	const FString TypeName = (Type == EDebuffType::Slow) ? TEXT("Slow") : TEXT("ReverseControl");
+	UE_LOG(LogTemp, Warning, TEXT("[Debuff] %s Started (Duration %.1fSeconds, times %d)"), *TypeName, Duration, NewDebuff.StackCount);
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan,
+			FString::Printf(TEXT("%s Effect Started! (Times %d)"), *TypeName, NewDebuff.StackCount));
+	}
+
+	if (!GetWorldTimerManager().IsTimerActive(DebuffTickTimerHandle))
+	{
+		GetWorldTimerManager().SetTimer(DebuffTickTimerHandle, this, &ASpartaCharacter::TickDebuffs, 0.1f, true);
+	}
+
+	RecalculateMovementModifiers();
+}
+
+void ASpartaCharacter::TickDebuffs()
+{
+	bool bAnyExpired = false;
+
+	for (int32 i = ActiveDebuffs.Num() - 1; i >= 0; i--)
+	{
+		ActiveDebuffs[i].TimeRemaining -= 0.1f;
+		if (ActiveDebuffs[i].TimeRemaining <= 0.f)
+		{
+			const FString TypeName = (ActiveDebuffs[i].Type == EDebuffType::Slow) ? TEXT("Slow") : TEXT("ReverseControl");
+			UE_LOG(LogTemp, Warning, TEXT("[Debuff] %s Ended"), *TypeName);
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Silver,
+					FString::Printf(TEXT("%s Effect Ended"), *TypeName));
+			}
+
+			ActiveDebuffs.RemoveAt(i);
+			bAnyExpired = true;
+		}
+	}
+
+	if (bAnyExpired)
+	{
+		RecalculateMovementModifiers();
+	}
+
+	if (ActiveDebuffs.Num() == 0)
+	{
+		GetWorldTimerManager().ClearTimer(DebuffTickTimerHandle);
+	}
+}
+
+void ASpartaCharacter::RecalculateMovementModifiers()
+{
+	float SlowMultiplier = 1.f;
+	for (const FActiveDebuff& Debuff : ActiveDebuffs)
+	{
+		if (Debuff.Type == EDebuffType::Slow)
+		{
+			SlowMultiplier *= Debuff.Magnitude;
+		}
+	}
+	CurrentSlowMultiplier = SlowMultiplier;
+
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = (bIsSprinting ? SprintSpeed : NormalSpeed) * CurrentSlowMultiplier;
+	}
+}
+
+bool ASpartaCharacter::HasActiveDebuff(EDebuffType Type) const
+{
+	for (const FActiveDebuff& Debuff : ActiveDebuffs)
+	{
+		if (Debuff.Type == Type) return true;
+	}
+	return false;
+}
+
+FString ASpartaCharacter::GetDebuffStatusText() const
+{
+	if (ActiveDebuffs.Num() == 0)
+	{
+		return TEXT("");
+	}
+
+	FString Result;
+	for (const FActiveDebuff& Debuff : ActiveDebuffs)
+	{
+		const FString TypeName = (Debuff.Type == EDebuffType::Slow) ? TEXT("Slow") : TEXT("Reverse");
+		Result += FString::Printf(TEXT("%s x%d (%.1fs)\n"), *TypeName, Debuff.StackCount, Debuff.TimeRemaining);
+	}
+	return Result;
 }

@@ -2,6 +2,7 @@
 #include "SpartaGameState.h"
 #include "SpartaGameInstance.h"
 #include "SpartaPlayerController.h"
+#include "SpartaCharacter.h"
 #include "SpawnVolume.h"
 #include "CoinItem.h"
 #include "Kismet/GameplayStatics.h"
@@ -214,6 +215,14 @@ void ASpartaGameState::UpdateHUD()
 				if (UTextBlock* LevelIndexText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Level"))))
 				{
 					LevelIndexText->SetText(FText::FromString(FString::Printf(TEXT("Level: %d"), CurrentLevelIndex + 1)));
+				}
+
+				if (UTextBlock* DebuffText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("DebuffStatus"))))
+				{
+					if (ASpartaCharacter* PlayerCharacter = Cast<ASpartaCharacter>(PlayerController->GetPawn()))
+					{
+						DebuffText->SetText(FText::FromString(PlayerCharacter->GetDebuffStatusText()));
+					}
 				}
 
 				if (UTextBlock* WaveText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Wave"))))

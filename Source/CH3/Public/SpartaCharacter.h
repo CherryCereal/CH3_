@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -10,6 +8,34 @@ class USpringArmComponent;
 class UCameraComponent;
 class UWidgetComponent;
 struct FInputActionValue;
+
+UENUM(BlueprintType)
+enum class EDebuffType : uint8
+{
+	Slow,
+	ReverseControl
+};
+
+USTRUCT(BlueprintType)
+struct FActiveDebuff
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Debuff")
+	EDebuffType Type = EDebuffType::Slow;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Debuff")
+	float Duration = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Debuff")
+	float TimeRemaining = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Debuff")
+	float Magnitude = 1.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Debuff")
+	int32 StackCount = 1;
+};
 
 UCLASS()
 class CH3_API ASpartaCharacter : public ACharacter
@@ -33,12 +59,31 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void AddHealth(float Amount);
 
+	UFUNCTION(BlueprintCallable, Category = "Debuff")
+	void ApplyDebuff(EDebuffType Type, float Duration, float Magnitude = 1.0f);
+
+	UFUNCTION(BlueprintPure, Category = "Debuff")
+	const TArray<FActiveDebuff>& GetActiveDebuffs() const { return ActiveDebuffs; }
+
+	UFUNCTION(BlueprintPure, Category = "Debuff")
+	FString GetDebuffStatusText() const;
+
+	UFUNCTION(BlueprintPure, Category = "Debuff")
+	bool HasActiveDebuff(EDebuffType Type) const;
+
 protected:
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "health")
 	float MaxHealth;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "health")
 	float Health;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Debuff")
+	TArray<FActiveDebuff> ActiveDebuffs;
+
+	FTimerHandle DebuffTickTimerHandle;
+
+	void TickDebuffs();
+	void RecalculateMovementModifiers();
 
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -64,5 +109,6 @@ private:
 	float NormalSpeed;
 	float SprintSpeedMultiplier;
 	float SprintSpeed;
-
+	float CurrentSlowMultiplier = 1.0f;
+	bool bIsSprinting = false;
 };
