@@ -13,9 +13,12 @@ ASpartaGameState::ASpartaGameState()
 	Score = 0;
 	SpawnedCoinCount = 0;
 	CollectedCoinCount = 0;
-	LevelDuration = 30.0f;
 	CurrentLevelIndex = 0;
 	MaxLevels = 3;
+
+	WaveSettingsList.Add(FWaveSettings{ 60.f, 3 });
+	WaveSettingsList.Add(FWaveSettings{ 45.f, 2 });
+	WaveSettingsList.Add(FWaveSettings{ 30.f, 1 });
 }
 
 void ASpartaGameState::BeginPlay()
@@ -62,15 +65,36 @@ void ASpartaGameState::StartLevel()
 		}
 	}
 
+	CurrentWaveIndex = 0;
+	StartWave(CurrentWaveIndex);
+}
+
+void ASpartaGameState::StartWave(int32 WaveIndex)
+{
+	if (!WaveSettingsList.IsValidIndex(WaveIndex))
+	{
+		EndLevel();
+		return;
+	}
+
+	const FWaveSettings& Settings = WaveSettingsList[WaveIndex];
+
+	UE_LOG(LogTemp, Warning, TEXT("Wave %d Started! (Limit %.0fseconds, %d item"),
+		WaveIndex + 1, Settings.TimeLimit, Settings.ItemSpawnCount);
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow,
+			FString::Printf(TEXT("Wave %d Started!"), WaveIndex + 1));
+	}
+
 	SpawnedCoinCount = 0;
 	CollectedCoinCount = 0;
 
 	TArray<AActor*> FoundVolumes;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundVolumes);
 
-	const int32 ItemToSpawn = 40;
-
-	for (int32 i = 0; i < ItemToSpawn; i++)
+	for (int32 i = 0; i < Settings.ItemSpawnCount; i++)
 	{
 		if (FoundVolumes.Num() > 0)
 		{
@@ -88,14 +112,23 @@ void ASpartaGameState::StartLevel()
 
 	UpdateHUD();
 
-	GetWorldTimerManager().SetTimer(LevelTimerHandle, this, &ASpartaGameState::OnLevelTimeUp, LevelDuration, false);
-
-
+	GetWorldTimerManager().SetTimer(WaveTimerHandle, this, &ASpartaGameState::OnWaveTimeUp, Settings.TimeLimit, false);
 }
 
-void ASpartaGameState::OnLevelTimeUp()
+void ASpartaGameState::AdvanceToNextWave()
 {
-	EndLevel();
+	CurrentWaveIndex++;
+	StartWave(CurrentWaveIndex);
+}
+
+void ASpartaGameState::OnWaveTimeUp()
+{
+	if (CollectedCoinCount < SpawnedCoinCount)
+	{
+		OnGameOver();
+		return;
+	}
+	AdvanceToNextWave();
 }
 
 void ASpartaGameState::OnCoinCollected()
@@ -104,13 +137,14 @@ void ASpartaGameState::OnCoinCollected()
 	
 	if (SpawnedCoinCount > 0 && CollectedCoinCount >= SpawnedCoinCount)
 	{
-		EndLevel();
+		GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+		OnWaveTimeUp();
 	}
 }
 
 void ASpartaGameState::EndLevel()
 {
-	GetWorldTimerManager().ClearTimer(LevelTimerHandle);
+	GetWorldTimerManager().ClearTimer(WaveTimerHandle);
 
 
 	if (UGameInstance* GameInstance = GetGameInstance())
@@ -147,7 +181,7 @@ void ASpartaGameState::OnGameOver()
 		if (ASpartaPlayerController* SpartaPlayerController = Cast<ASpartaPlayerController>(PlayerController))
 		{
 			SpartaPlayerController->SetPause(true);
-			SpartaPlayerController->ShowMainMenu(true);
+			SpartaPlayerController->ShowGameOverScreen();
 		}
 	}
 }
@@ -162,7 +196,7 @@ void ASpartaGameState::UpdateHUD()
 			{
 				if (UTextBlock* TimeText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Time"))))
 				{
-					float RemainingTime = GetWorldTimerManager().GetTimerRemaining(LevelTimerHandle);
+					float RemainingTime = GetWorldTimerManager().GetTimerRemaining(WaveTimerHandle);
 					TimeText->SetText(FText::FromString(FString::Printf(TEXT("Time: %.1f"), RemainingTime)));
 				}
 
@@ -170,8 +204,7 @@ void ASpartaGameState::UpdateHUD()
 				{
 					if (UGameInstance* GameInstance = GetGameInstance())
 					{
-						USpartaGameInstance* SpartaGameInstance = Cast<USpartaGameInstance>(GameInstance);
-						if (SpartaGameInstance)
+						if (USpartaGameInstance* SpartaGameInstance = Cast<USpartaGameInstance>(GameInstance))
 						{
 							ScoreText->SetText(FText::FromString(FString::Printf(TEXT("Score: %d"), SpartaGameInstance->TotalScore)));
 						}
@@ -180,7 +213,12 @@ void ASpartaGameState::UpdateHUD()
 
 				if (UTextBlock* LevelIndexText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Level"))))
 				{
-					LevelIndexText->SetText(FText::FromString(FString::Printf(TEXT("Level: %d"), CurrentLevelIndex+1)));
+					LevelIndexText->SetText(FText::FromString(FString::Printf(TEXT("Level: %d"), CurrentLevelIndex + 1)));
+				}
+
+				if (UTextBlock* WaveText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Wave"))))
+				{
+					WaveText->SetText(FText::FromString(FString::Printf(TEXT("Wave: %d"), CurrentWaveIndex + 1)));
 				}
 			}
 		}

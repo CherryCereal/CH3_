@@ -6,6 +6,17 @@
 #include "GameFramework/GameState.h"
 #include "SpartaGameState.generated.h"
 
+USTRUCT(BlueprintType)
+struct FWaveSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
+	float TimeLimit = 60.f;       // 이 웨이브 제한시간(초)
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wave")
+	int32 ItemSpawnCount = 3;     // 이 웨이브에서 스폰할 아이템 개수
+};
 
 UCLASS()
 class CH3_API ASpartaGameState : public AGameState
@@ -23,8 +34,13 @@ public:
 	int32 SpawnedCoinCount;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coin")
 	int32 CollectedCoinCount;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level")
-	float LevelDuration;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wave")
+	TArray<FWaveSettings> WaveSettingsList;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wave")
+	int32 CurrentWaveIndex;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
 	int32 CurrentLevelIndex;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
@@ -32,7 +48,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level")
 	TArray<FName> LevelMapNames;
 
-	FTimerHandle LevelTimerHandle;
+	FTimerHandle WaveTimerHandle;
 	FTimerHandle HUDUpdateTimerHandle;
 
 	UFUNCTION(BlueprintPure, Category = "Score")
@@ -45,7 +61,9 @@ public:
 	
 
 	void StartLevel();
-	void OnLevelTimeUp();
+	void StartWave(int32 WaveIndex);
+	void AdvanceToNextWave();
+	void OnWaveTimeUp();
 	void OnCoinCollected();
 	void EndLevel();
 	void UpdateHUD();

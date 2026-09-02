@@ -38,15 +38,28 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Menu")
 	UUserWidget* MainMenuWidgetInstance;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameOver")
+	TSubclassOf<UUserWidget> GameOverWidgetClass;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GameOver")
+	UUserWidget* GameOverWidgetInstance;
+
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	UUserWidget* GetHUDWidget() const;
 
 	UFUNCTION(BlueprintCallable, Category = "HUD")
 	void ShowGameHUD();
 	UFUNCTION(BlueprintCallable, Category = "Menu")
-	void ShowMainMenu(bool bIsRestart);
+	void ShowMainMenu();
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void ShowGameOverScreen();
 	UFUNCTION(BlueprintCallable, Category = "Menu")
 	void StartGame();
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void RestartGame();          
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void GoToMainMenu();
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void QuitGame();
 
 	virtual void BeginPlay() override;
 };

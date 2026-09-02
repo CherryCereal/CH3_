@@ -6,6 +6,7 @@
 AMineItem::AMineItem()
 {
 	ExplosionDelay = 3.0f;
+	ExplosionRadius = 300.0f;
 	ExplosionDamage = 30.0f;
 	bHasExploded = false;
 	ItemType = "Mine";
@@ -55,10 +56,14 @@ void AMineItem::Explode()
 	if (Particle)
 	{
 		FTimerHandle DestroyParticleTimerHandle;
+		TWeakObjectPtr<UParticleSystemComponent> WeakParticle = Particle;
 
-		GetWorld()->GetTimerManager().SetTimer(DestroyParticleTimerHandle, [Particle]()
-		{
-			Particle->DestroyComponent();
+		GetWorld()->GetTimerManager().SetTimer(DestroyParticleTimerHandle, [WeakParticle]()
+			{
+				if (WeakParticle.IsValid())
+				{
+					WeakParticle->DestroyComponent();
+				}
 			}, 1.0f, false);
 	}
 }
